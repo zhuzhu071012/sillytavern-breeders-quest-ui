@@ -1,29 +1,58 @@
-# 王朝锻炉 · SillyTavern 社区前端
+# 神都世家：武周人生录
 
-为《育种者任务：王朝锻炉》角色卡制作的中文沉浸式前端。它是纯浏览器 UI 扩展：从当前聊天回复末尾的状态块读取数据，展示属性、任务、血统、孕育进程、背包和系统通知，不需要额外服务器。
+《神都世家》是为 SillyTavern 制作的中国古代人生与家族模拟角色卡。故事从显庆五年（660）开始，经历武后参政、二圣临朝、临朝称制、690年建立武周，直至705年神龙政变。
+
+玩家可以读书应举、作答策问、入仕治政、经营田产、成婚育子，并培养不会瞬间长大的真实年龄后代。成年后可主动切换为后代；主角死亡后必须从成年后代中选择继承人。
+
+> 女子参加科举是本作明确的架空改革。其他制度和历史节点尽量贴近唐至武周年代。
 
 ## 安装
 
-1. 在 SillyTavern 打开“扩展 → 安装扩展”，粘贴 `https://github.com/zhuzhu071012/sillytavern-breeders-quest-ui`。
-2. 或把 `sillytavern-breeders-quest-ui` 文件夹复制到 `public/scripts/extensions/third-party/`，重启 SillyTavern。
-3. 导入 `character-card/breeders-quest-community-zh.json`，并可用同目录 `cover.png` 作为封面。
-4. 开始新聊天。右下角的棋子按钮可打开冒险面板。
+在 SillyTavern 打开“扩展 → 安装扩展”，粘贴：
 
-`dist/sillytavern-breeders-quest-ui.zip` 是可分发扩展包，`dist/character-card/` 是角色卡与配图。
+```text
+https://github.com/zhuzhu071012/sillytavern-breeders-quest-ui
+```
 
-## 使用说明
+随后下载并直接导入 `character-card/shendu-families-wuzhou-life-v2.png`。该PNG已经内嵌完整角色卡；也可以导入同目录JSON，并用 `cover.png` 设置封面。
 
-- “查看属性 / 任务板 / 血统谱系”会把建议指令填入输入框，不会自动发送。
-- 模型必须保留回复末尾的 `<breeder_state>` 状态块，面板才能实时更新。
-- 若模型输出了损坏的 JSON，前端会继续显示上一个有效状态；下一回合通常会自行恢复。
-- 设置页可关闭状态块隐藏、修改强调色或关闭自动打开选项。
+也可下载 `dist/sillytavern-breeders-quest-ui.zip`，解压到：
 
-## 社区发布建议
+```text
+SillyTavern/public/scripts/extensions/third-party/sillytavern-breeders-quest-ui/
+```
 
-发布时同时提供扩展仓库地址、角色卡 JSON、封面 PNG 和本说明。第三方扩展拥有页面脚本权限，使用者应只从可信仓库安装；本扩展不发起网络请求，也不上传聊天内容。
+确保 `manifest.json` 直接位于上述文件夹内，然后重启 SillyTavern。
+
+## 2.0功能
+
+- 武周古籍与宫廷风格人生面板
+- 学识、文采、政略、德望、人脉、体魄、家业七项属性
+- 乡贡、省试、殿前问策与具体评卷
+- 官职、考课、升贬、地方治理和朝堂派系
+- 现银、田产、声望与影响力
+- 子女真实年龄、教育路线、师承、健康和亲密度
+- 成年主动换代、死亡强制继承、摄理与绝嗣结局
+- 660—705历史时间线与可改写关键节点
+- `<wuzhou_state>` 2.0协议，兼容读取1.0 `<breeder_state>`
+
+## 成人内容边界
+
+成人亲密内容只允许发生在明确年满21岁、自愿且具有同意能力的角色之间。未成年人只会进入家庭、成长、健康与教育剧情，不允许婚姻、情色、孕育或裸露内容。
+
+## 开发与打包
+
+```powershell
+npm run check
+npm run card
+npm run package
+```
+
+项目无需安装NPM依赖。状态解析和继承规则使用 Node.js 内置测试运行器验证。
+
+## 版本
+
+- `v2.0.0`：《神都世家：武周人生录》
+- `v1.0.0`：旧《王朝锻炉》西幻版，仅作归档
 
 项目主页：https://github.com/zhuzhu071012/sillytavern-breeders-quest-ui
-
-## 兼容性
-
-面向当前 SillyTavern 第三方 UI 扩展结构，使用原生 JavaScript/CSS，无构建依赖。角色卡仍是 `chara_card_v2`，不安装扩展也能作为普通角色卡使用，只是不会显示独立面板。

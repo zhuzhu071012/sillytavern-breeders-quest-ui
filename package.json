@@ -1,11 +1,11 @@
 {
   "name": "sillytavern-breeders-quest-ui",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "node --check index.js && node --test tests/*.test.mjs",
-    "card": "node scripts/build-card.mjs",
+    "check": "node --check index.js && node --check scripts/build-card.mjs && node --check scripts/embed-card.mjs && node --test tests/*.test.mjs",
+    "card": "node scripts/build-card.mjs && node scripts/embed-card.mjs",
     "package": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package.ps1"
   }
 }
