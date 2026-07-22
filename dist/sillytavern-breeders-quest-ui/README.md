@@ -35,6 +35,8 @@ SillyTavern/public/scripts/extensions/third-party/sillytavern-breeders-quest-ui/
 - 成年主动换代、死亡强制继承、摄理与绝嗣结局
 - 660—705历史时间线与可改写关键节点
 - `wuzhou-state` JSON代码块协议，兼容读取旧 `<wuzhou_state>` 和1.0 `<breeder_state>`
+- 官方消息事件驱动刷新，并以多次延迟读取解决流式输出写入竞态
+- 每回合注入上一份有效状态；模型漏发时显示同步警告和“重试同步”按钮
 
 ## 成人内容边界
 
@@ -52,6 +54,7 @@ npm run package
 
 ## 版本
 
+- `v2.0.4`：修复剧情推进后面板不更新，增加事件刷新、状态注入与漏发诊断
 - `v2.0.3`：修复SillyTavern吞掉状态标签后直接显示JSON的问题
 - `v2.0.2`：蓝灰书生服饰与圣光女皇意象封面
 - `v2.0.1`：双主角封面，女书生居主要位置

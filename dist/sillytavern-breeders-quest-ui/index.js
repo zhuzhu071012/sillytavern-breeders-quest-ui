@@ -1,10 +1,11 @@
 import { extension_settings, getContext } from '../../../extensions.js';
-import { saveSettingsDebounced } from '../../../../script.js';
+import { eventSource, event_types, extension_prompt_types, saveSettingsDebounced, setExtensionPrompt } from '../../../../script.js';
 import { ABILITY_KEYS, ADULT_AGE, DEFAULT_STATE, eligibleHeirs, extractLatestState, isStatePayloadText } from './state-parser.js';
 
 const EXTENSION_NAME = 'sillytavern-breeders-quest-ui';
 const EXTENSION_PATH = `scripts/extensions/third-party/${EXTENSION_NAME}`;
-const DEFAULT_SETTINGS = { autoOpen: true, hideBlocks: true, accent: '#a83b32' };
+const DEFAULT_SETTINGS = { autoOpen: true, hideBlocks: true, promptReminder: true, accent: '#a83b32' };
+const PROMPT_KEY = 'shendu-wuzhou-state-reminder';
 const STATE_PROTOCOL = ['```wuzhou-state', '{"calendar":{"year":660,"reign":"显庆五年","month":1,"season":"春","phase":"武后参政"},"location":"东都洛阳","protagonist":{"id":"p1","name":"姓名","gender":"性别","age":21,"origin":"寒门","title":"白身","office":"无","generation":1,"alive":true},"abilities":{"学识":10,"文采":10,"政略":10,"德望":10,"人脉":10,"体魄":60,"家业":10},"examination":{"stage":"未入场","rank":"无","next":"乡贡","progress":0},"estate":{"cash":20,"land":0,"reputation":0,"influence":0},"quests":[],"relations":[],"spouses":[],"pregnancies":[],"children":[],"historicalEvents":[],"notices":[],"inventory":[],"succession":{"required":false,"reason":"","eligibleHeirs":[],"regent":null,"extinct":false,"previousProtagonists":[]}}', '```'].join('\n');
 const TABS = [
   ['overview', '总览'], ['exam', '科举'], ['career', '仕途'], ['family', '家族'], ['children', '子女'], ['relations', '关系'], ['history', '史事'],
@@ -14,6 +15,8 @@ let panel;
 let latestState = DEFAULT_STATE;
 let activeTab = 'overview';
 let autoOpened = false;
+let statusWarning = '';
+let refreshTimers = [];
 
 function settings() {
   extension_settings[EXTENSION_NAME] = { ...DEFAULT_SETTINGS, ...(extension_settings[EXTENSION_NAME] || {}) };
@@ -89,6 +92,7 @@ function historyView(state) { const root = node('div', 'ss-view'); root.append(s
 function render() {
   if (!panel) return;
   const body = panel.querySelector('.ss-body'); body.replaceChildren();
+  if (statusWarning) body.append(node('div', 'ss-sync-warning', statusWarning));
   const views = { overview: overviewView, exam: examView, career: careerView, family: familyView, children: childView, relations: relationView, history: historyView };
   body.append((views[activeTab] || overviewView)(latestState));
   panel.querySelectorAll('[data-tab]').forEach(button => button.classList.toggle('active', button.dataset.tab === activeTab));
@@ -118,7 +122,27 @@ function createPanel() {
 }
 
 function queuePrompt(message) { const textarea = document.querySelector('#send_textarea'); if (!textarea) return window.toastr?.warning('未找到聊天输入框'); textarea.value = message; textarea.dispatchEvent(new Event('input', { bubbles: true })); textarea.focus(); if (!latestState.succession.required) panel.classList.remove('is-open'); }
-function refresh() { const parsed = extractLatestState(getContext()?.chat); latestState = parsed || DEFAULT_STATE; hideStateBlocks(); render(); if ((parsed && settings().autoOpen && !autoOpened) || latestState.succession.required) { autoOpened = true; panel?.classList.add('is-open'); } }
+function updatePromptReminder(hasState) {
+  if (!hasState || !settings().promptReminder) return setExtensionPrompt(PROMPT_KEY, '', extension_prompt_types.IN_PROMPT, 0);
+  const snapshot = JSON.stringify(latestState).slice(0, 12000);
+  const reminder = `【神都世家状态同步】以下是上一回合已验证状态：${snapshot}\n本回合必须根据实际剧情更新它，并在正文末尾输出且只输出一个标记为 wuzhou-state 的有效JSON代码块。不得照抄已发生变化的字段，不得省略顶层字段，代码块后不得追加文字。`;
+  setExtensionPrompt(PROMPT_KEY, reminder, extension_prompt_types.IN_PROMPT, 0, false);
+}
+function refresh({ expectUpdate = false } = {}) {
+  const chat = getContext()?.chat || [];
+  const newestState = extractLatestState(chat.length ? [chat.at(-1)] : []);
+  const parsed = newestState || extractLatestState(chat);
+  if (parsed) latestState = parsed;
+  else latestState = DEFAULT_STATE;
+  statusWarning = expectUpdate && !newestState ? '最新回复未包含有效状态，面板暂时保留上一回合数据。请点击“重试同步”，或要求模型补发状态。' : '';
+  updatePromptReminder(Boolean(parsed));
+  hideStateBlocks(); render();
+  if ((parsed && settings().autoOpen && !autoOpened) || latestState.succession.required) { autoOpened = true; panel?.classList.add('is-open'); }
+}
+function scheduleRefresh(expectUpdate = false) {
+  refreshTimers.forEach(clearTimeout);
+  refreshTimers = [0, 120, 500, 1200].map((delay, index, delays) => setTimeout(() => refresh({ expectUpdate: expectUpdate && index === delays.length - 1 }), delay));
+}
 function hideStateBlocks() {
   document.querySelectorAll('#chat .mes_text p, #chat .mes_text pre, #chat .mes_text .code-block, #chat .mes_text .codeblock, #chat .mes_text .mes_code').forEach(block => {
     block.classList.toggle('ss-protocol-block', settings().hideBlocks && isStatePayloadText(block.textContent));
@@ -126,6 +150,12 @@ function hideStateBlocks() {
 }
 function addLauncher() { const button = node('button', 'ss-launcher', '周'); button.id = 'ss-launcher'; button.title = '打开神都世家人生面板'; button.addEventListener('click', () => { if (latestState.succession.required) panel.classList.add('is-open'); else panel.classList.toggle('is-open'); if (panel.classList.contains('is-open')) refresh(); }); document.body.append(button); }
 async function copyProtocol() { await navigator.clipboard.writeText(STATE_PROTOCOL); window.toastr?.success('武周状态协议已复制'); }
-function bindSettings() { const value = settings(); $('#ss-auto-open').prop('checked', value.autoOpen).on('input', event => { value.autoOpen = event.target.checked; saveSettingsDebounced(); }); $('#ss-hide-blocks').prop('checked', value.hideBlocks).on('input', event => { value.hideBlocks = event.target.checked; hideStateBlocks(); saveSettingsDebounced(); }); $('#ss-accent').val(value.accent).on('input', event => { value.accent = event.target.value; document.documentElement.style.setProperty('--ss-accent', value.accent); saveSettingsDebounced(); }); $('#ss-open-panel').on('click', () => { panel.classList.add('is-open'); refresh(); }); $('#ss-copy-protocol').on('click', copyProtocol); document.documentElement.style.setProperty('--ss-accent', value.accent); }
+function bindSettings() { const value = settings(); $('#ss-auto-open').prop('checked', value.autoOpen).on('input', event => { value.autoOpen = event.target.checked; saveSettingsDebounced(); }); $('#ss-hide-blocks').prop('checked', value.hideBlocks).on('input', event => { value.hideBlocks = event.target.checked; hideStateBlocks(); saveSettingsDebounced(); }); $('#ss-prompt-reminder').prop('checked', value.promptReminder).on('input', event => { value.promptReminder = event.target.checked; updatePromptReminder(latestState !== DEFAULT_STATE); saveSettingsDebounced(); }); $('#ss-accent').val(value.accent).on('input', event => { value.accent = event.target.value; document.documentElement.style.setProperty('--ss-accent', value.accent); saveSettingsDebounced(); }); $('#ss-open-panel').on('click', () => { panel.classList.add('is-open'); refresh(); }); $('#ss-copy-protocol').on('click', copyProtocol); $('#ss-retry-sync').on('click', () => { queuePrompt('请不要推进剧情，只根据刚才已经发生的内容补发一个完整、有效、已更新的 wuzhou-state JSON代码块。'); }); document.documentElement.style.setProperty('--ss-accent', value.accent); }
 
-jQuery(async () => { settings(); $('#extensions_settings2').append(await $.get(`${EXTENSION_PATH}/settings.html`)); bindSettings(); createPanel(); addLauncher(); const chat = document.querySelector('#chat'); if (chat) new MutationObserver(refresh).observe(chat, { childList: true, subtree: true }); refresh(); });
+jQuery(async () => {
+  settings(); $('#extensions_settings2').append(await $.get(`${EXTENSION_PATH}/settings.html`)); bindSettings(); createPanel(); addLauncher();
+  const chat = document.querySelector('#chat'); if (chat) new MutationObserver(() => scheduleRefresh(false)).observe(chat, { childList: true, subtree: true });
+  [event_types.MESSAGE_RECEIVED, event_types.CHARACTER_MESSAGE_RENDERED, event_types.GENERATION_ENDED, event_types.MESSAGE_SWIPED, event_types.MESSAGE_UPDATED, event_types.MESSAGE_EDITED].forEach(type => eventSource.on(type, () => scheduleRefresh(true)));
+  [event_types.CHAT_CHANGED, event_types.MESSAGE_DELETED].forEach(type => eventSource.on(type, () => { autoOpened = false; statusWarning = ''; scheduleRefresh(false); }));
+  scheduleRefresh(false);
+});
