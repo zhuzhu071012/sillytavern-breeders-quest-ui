@@ -34,7 +34,7 @@ SillyTavern/public/scripts/extensions/third-party/sillytavern-breeders-quest-ui/
 - 子女真实年龄、教育路线、师承、健康和亲密度
 - 成年主动换代、死亡强制继承、摄理与绝嗣结局
 - 660—705历史时间线与可改写关键节点
-- `<wuzhou_state>` 2.0协议，兼容读取1.0 `<breeder_state>`
+- `wuzhou-state` JSON代码块协议，兼容读取旧 `<wuzhou_state>` 和1.0 `<breeder_state>`
 
 ## 成人内容边界
 
@@ -52,6 +52,7 @@ npm run package
 
 ## 版本
 
+- `v2.0.3`：修复SillyTavern吞掉状态标签后直接显示JSON的问题
 - `v2.0.2`：蓝灰书生服饰与圣光女皇意象封面
 - `v2.0.1`：双主角封面，女书生居主要位置
 - `v2.0.0`：《神都世家：武周人生录》

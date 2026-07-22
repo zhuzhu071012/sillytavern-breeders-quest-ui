@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ADULT_AGE, advanceStateYears, eligibleHeirs, extractLatestState, lifeStage, normalizeState, stripStateBlocks, validateAdultOnly } from '../state-parser.js';
+import { ADULT_AGE, advanceStateYears, eligibleHeirs, extractLatestState, isStatePayloadText, lifeStage, normalizeState, stripStateBlocks, validateAdultOnly } from '../state-parser.js';
 
-const block = value => `<wuzhou_state>${JSON.stringify(value)}</wuzhou_state>`;
+const block = value => `\`\`\`wuzhou-state\n${JSON.stringify(value)}\n\`\`\``;
 
 test('新协议优先于旧协议并读取最新有效状态', () => {
   const state = extractLatestState([
@@ -46,4 +46,7 @@ test('690与705历史节点可完整保留', () => {
 test('状态块可从消息显示文本中移除', () => {
   assert.equal(stripStateBlocks(`正文\n${block({ location: '神都' })}`), '正文');
   assert.equal(stripStateBlocks('旧正文\n<breeder_state>{"time":"夜"}</breeder_state>'), '旧正文');
+  const strippedByRenderer = '{"calendar":{"year":660},"protagonist":{"name":"姓名"},"succession":{"required":false}}';
+  assert.equal(isStatePayloadText(strippedByRenderer), true);
+  assert.equal(stripStateBlocks(strippedByRenderer), '');
 });

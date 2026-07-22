@@ -1,11 +1,11 @@
 import { extension_settings, getContext } from '../../../extensions.js';
 import { saveSettingsDebounced } from '../../../../script.js';
-import { ABILITY_KEYS, ADULT_AGE, DEFAULT_STATE, eligibleHeirs, extractLatestState } from './state-parser.js';
+import { ABILITY_KEYS, ADULT_AGE, DEFAULT_STATE, eligibleHeirs, extractLatestState, isStatePayloadText } from './state-parser.js';
 
 const EXTENSION_NAME = 'sillytavern-breeders-quest-ui';
 const EXTENSION_PATH = `scripts/extensions/third-party/${EXTENSION_NAME}`;
 const DEFAULT_SETTINGS = { autoOpen: true, hideBlocks: true, accent: '#a83b32' };
-const STATE_PROTOCOL = `<wuzhou_state>{"calendar":{"year":660,"reign":"显庆五年","month":1,"season":"春","phase":"武后参政"},"location":"东都洛阳","protagonist":{"id":"p1","name":"姓名","gender":"性别","age":21,"origin":"寒门","title":"白身","office":"无","generation":1,"alive":true},"abilities":{"学识":10,"文采":10,"政略":10,"德望":10,"人脉":10,"体魄":60,"家业":10},"examination":{"stage":"未入场","rank":"无","next":"乡贡","progress":0},"estate":{"cash":20,"land":0,"reputation":0,"influence":0},"quests":[],"relations":[],"spouses":[],"pregnancies":[],"children":[],"historicalEvents":[],"notices":[],"inventory":[],"succession":{"required":false,"reason":"","eligibleHeirs":[],"regent":null,"extinct":false,"previousProtagonists":[]}}</wuzhou_state>`;
+const STATE_PROTOCOL = ['```wuzhou-state', '{"calendar":{"year":660,"reign":"显庆五年","month":1,"season":"春","phase":"武后参政"},"location":"东都洛阳","protagonist":{"id":"p1","name":"姓名","gender":"性别","age":21,"origin":"寒门","title":"白身","office":"无","generation":1,"alive":true},"abilities":{"学识":10,"文采":10,"政略":10,"德望":10,"人脉":10,"体魄":60,"家业":10},"examination":{"stage":"未入场","rank":"无","next":"乡贡","progress":0},"estate":{"cash":20,"land":0,"reputation":0,"influence":0},"quests":[],"relations":[],"spouses":[],"pregnancies":[],"children":[],"historicalEvents":[],"notices":[],"inventory":[],"succession":{"required":false,"reason":"","eligibleHeirs":[],"regent":null,"extinct":false,"previousProtagonists":[]}}', '```'].join('\n');
 const TABS = [
   ['overview', '总览'], ['exam', '科举'], ['career', '仕途'], ['family', '家族'], ['children', '子女'], ['relations', '关系'], ['history', '史事'],
 ];
@@ -119,7 +119,11 @@ function createPanel() {
 
 function queuePrompt(message) { const textarea = document.querySelector('#send_textarea'); if (!textarea) return window.toastr?.warning('未找到聊天输入框'); textarea.value = message; textarea.dispatchEvent(new Event('input', { bubbles: true })); textarea.focus(); if (!latestState.succession.required) panel.classList.remove('is-open'); }
 function refresh() { const parsed = extractLatestState(getContext()?.chat); latestState = parsed || DEFAULT_STATE; hideStateBlocks(); render(); if ((parsed && settings().autoOpen && !autoOpened) || latestState.succession.required) { autoOpened = true; panel?.classList.add('is-open'); } }
-function hideStateBlocks() { document.querySelectorAll('#chat .mes_text p, #chat .mes_text pre').forEach(block => { const value = block.textContent.trim(); const stateBlock = value.startsWith('<wuzhou_state>') || value.startsWith('<breeder_state>') || /^```(?:wuzhou|breeder)/i.test(value); block.classList.toggle('ss-protocol-block', settings().hideBlocks && stateBlock); }); }
+function hideStateBlocks() {
+  document.querySelectorAll('#chat .mes_text p, #chat .mes_text pre, #chat .mes_text .code-block, #chat .mes_text .codeblock, #chat .mes_text .mes_code').forEach(block => {
+    block.classList.toggle('ss-protocol-block', settings().hideBlocks && isStatePayloadText(block.textContent));
+  });
+}
 function addLauncher() { const button = node('button', 'ss-launcher', '周'); button.id = 'ss-launcher'; button.title = '打开神都世家人生面板'; button.addEventListener('click', () => { if (latestState.succession.required) panel.classList.add('is-open'); else panel.classList.toggle('is-open'); if (panel.classList.contains('is-open')) refresh(); }); document.body.append(button); }
 async function copyProtocol() { await navigator.clipboard.writeText(STATE_PROTOCOL); window.toastr?.success('武周状态协议已复制'); }
 function bindSettings() { const value = settings(); $('#ss-auto-open').prop('checked', value.autoOpen).on('input', event => { value.autoOpen = event.target.checked; saveSettingsDebounced(); }); $('#ss-hide-blocks').prop('checked', value.hideBlocks).on('input', event => { value.hideBlocks = event.target.checked; hideStateBlocks(); saveSettingsDebounced(); }); $('#ss-accent').val(value.accent).on('input', event => { value.accent = event.target.value; document.documentElement.style.setProperty('--ss-accent', value.accent); saveSettingsDebounced(); }); $('#ss-open-panel').on('click', () => { panel.classList.add('is-open'); refresh(); }); $('#ss-copy-protocol').on('click', copyProtocol); document.documentElement.style.setProperty('--ss-accent', value.accent); }

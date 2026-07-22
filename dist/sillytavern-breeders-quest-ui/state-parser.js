@@ -131,7 +131,14 @@ export function validateAdultOnly(state) {
   return { valid: violations.length === 0, violations };
 }
 
+export function isStatePayloadText(body) {
+  const value = String(body ?? '').trim();
+  const nakedJson = value.startsWith('{') && value.includes('"calendar"') && value.includes('"protagonist"') && value.includes('"succession"');
+  return value.startsWith('<wuzhou_state>') || value.startsWith('<breeder_state>') || /^```(?:wuzhou|breeder)/i.test(value) || nakedJson;
+}
+
 export function stripStateBlocks(body) {
+  if (isStatePayloadText(body) && String(body).trim().startsWith('{')) return '';
   let result = String(body ?? '');
   for (const pattern of [...WUZHOU_PATTERNS, ...LEGACY_PATTERNS]) { pattern.lastIndex = 0; result = result.replace(pattern, ''); }
   return result.trimEnd();
