@@ -4,7 +4,7 @@ import { ABILITY_KEYS, ADULT_AGE, DEFAULT_STATE, eligibleHeirs, extractLatestSta
 
 const EXTENSION_NAME = 'sillytavern-breeders-quest-ui';
 const EXTENSION_PATH = `scripts/extensions/third-party/${EXTENSION_NAME}`;
-const DEFAULT_SETTINGS = { autoOpen: true, hideBlocks: true, promptReminder: true, accent: '#a83b32' };
+const DEFAULT_SETTINGS = { autoOpen: true, hideBlocks: true, promptReminder: true, accent: '#a83b32', launcherPosition: null };
 const PROMPT_KEY = 'shendu-wuzhou-state-reminder';
 const STATE_PROTOCOL = ['```wuzhou-state', '{"calendar":{"year":660,"reign":"显庆五年","month":1,"season":"春","phase":"武后参政"},"location":"东都洛阳","powers":{"timeStop":{"active":false,"affected":"世界万物（玩家除外）"},"hypnosis":{"enabled":true,"lastTarget":"","effect":""},"malePregnancy":{"enabled":true}},"worldRules":{"femaleDominant":true,"malePregnancy":true},"protagonist":{"id":"player","name":"玩家","isPlayer":true,"gender":"未定","age":21,"origin":"寒门","title":"白身","office":"无","generation":1,"alive":true},"abilities":{"学识":10,"文采":10,"政略":10,"德望":10,"人脉":10,"体魄":60,"家业":10},"examination":{"stage":"未入场","rank":"无","next":"乡贡","progress":0},"estate":{"cash":20,"land":0,"reputation":0,"influence":0},"quests":[],"relations":[],"spouses":[],"pregnancies":[],"children":[],"historicalEvents":[],"notices":[],"inventory":[],"succession":{"required":false,"reason":"","eligibleHeirs":[],"regent":null,"extinct":false,"previousProtagonists":[]}}', '```'].join('\n');
 const TABS = [
@@ -204,16 +204,54 @@ function hideStateBlocks() {
 function placeLauncher() {
   const row = document.querySelector('#ss-launcher-row');
   if (!row) return;
-  const messages = [...document.querySelectorAll('#chat .mes[is_user="false"]')].filter(message => message.getAttribute('is_system') !== 'true');
-  const target = messages.at(-1)?.querySelector('.mes_text');
-  row.hidden = !target;
-  if (target && row.parentElement !== target) target.append(row);
+  row.hidden = false;
+  const saved = settings().launcherPosition;
+  if (saved && Number.isFinite(saved.x) && Number.isFinite(saved.y)) {
+    const maxX = Math.max(8, window.innerWidth - row.offsetWidth - 8);
+    const maxY = Math.max(8, window.innerHeight - row.offsetHeight - 8);
+    row.style.left = `${Math.max(8, Math.min(maxX, saved.x))}px`;
+    row.style.top = `${Math.max(8, Math.min(maxY, saved.y))}px`;
+    row.style.right = 'auto';
+    row.style.bottom = 'auto';
+  }
 }
 function addLauncher() {
   const row = node('div', 'ss-launcher-row'); row.id = 'ss-launcher-row';
   const button = node('button', 'ss-launcher', '周'); button.id = 'ss-launcher'; button.title = '打开武周人生玩家面板'; button.setAttribute('aria-label', button.title);
-  button.addEventListener('click', () => { if (latestState.succession.required) panel.classList.add('is-open'); else panel.classList.toggle('is-open'); if (panel.classList.contains('is-open')) refresh(); });
-  row.append(button); row.hidden = true; document.body.append(row); placeLauncher();
+  let drag = null;
+  button.addEventListener('pointerdown', event => {
+    if (event.button !== 0) return;
+    const rect = row.getBoundingClientRect();
+    drag = { pointerId: event.pointerId, offsetX: event.clientX - rect.left, offsetY: event.clientY - rect.top, moved: false };
+    button.setPointerCapture(event.pointerId);
+    row.classList.add('is-dragging');
+    event.preventDefault();
+  });
+  button.addEventListener('pointermove', event => {
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    const maxX = Math.max(8, window.innerWidth - row.offsetWidth - 8);
+    const maxY = Math.max(8, window.innerHeight - row.offsetHeight - 8);
+    const x = Math.max(8, Math.min(maxX, event.clientX - drag.offsetX));
+    const y = Math.max(8, Math.min(maxY, event.clientY - drag.offsetY));
+    if (Math.abs(x - row.getBoundingClientRect().left) > 2 || Math.abs(y - row.getBoundingClientRect().top) > 2) drag.moved = true;
+    row.style.left = `${x}px`; row.style.top = `${y}px`; row.style.right = 'auto'; row.style.bottom = 'auto';
+  });
+  const finishDrag = event => {
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    const moved = drag.moved;
+    drag = null; row.classList.remove('is-dragging');
+    const rect = row.getBoundingClientRect();
+    settings().launcherPosition = { x: Math.round(rect.left), y: Math.round(rect.top) };
+    saveSettingsDebounced();
+    if (!moved) {
+      if (latestState.succession.required) panel.classList.add('is-open'); else panel.classList.toggle('is-open');
+      if (panel.classList.contains('is-open')) refresh();
+    }
+  };
+  button.addEventListener('pointerup', finishDrag);
+  button.addEventListener('pointercancel', event => { if (drag?.pointerId === event.pointerId) { drag = null; row.classList.remove('is-dragging'); } });
+  row.append(button); row.hidden = false; document.body.append(row); placeLauncher();
+  window.addEventListener('resize', placeLauncher);
 }
 async function copyProtocol() { await navigator.clipboard.writeText(STATE_PROTOCOL); window.toastr?.success('武周状态协议已复制'); }
 function bindSettings() { const value = settings(); $('#ss-auto-open').prop('checked', value.autoOpen).on('input', event => { value.autoOpen = event.target.checked; saveSettingsDebounced(); }); $('#ss-hide-blocks').prop('checked', value.hideBlocks).on('input', event => { value.hideBlocks = event.target.checked; hideStateBlocks(); saveSettingsDebounced(); }); $('#ss-prompt-reminder').prop('checked', value.promptReminder).on('input', event => { value.promptReminder = event.target.checked; updatePromptReminder(latestState !== DEFAULT_STATE); saveSettingsDebounced(); }); $('#ss-accent').val(value.accent).on('input', event => { value.accent = event.target.value; document.documentElement.style.setProperty('--ss-accent', value.accent); saveSettingsDebounced(); }); $('#ss-open-panel').on('click', () => { panel.classList.add('is-open'); refresh(); }); $('#ss-copy-protocol').on('click', copyProtocol); $('#ss-retry-sync').on('click', () => { queuePrompt('请不要推进剧情，只根据刚才已经发生的内容补发一个完整、有效、已更新的 wuzhou-state JSON代码块。'); }); document.documentElement.style.setProperty('--ss-accent', value.accent); }
