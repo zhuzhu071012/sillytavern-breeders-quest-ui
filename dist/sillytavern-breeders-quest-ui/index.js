@@ -6,9 +6,9 @@ const EXTENSION_NAME = 'sillytavern-breeders-quest-ui';
 const EXTENSION_PATH = `scripts/extensions/third-party/${EXTENSION_NAME}`;
 const DEFAULT_SETTINGS = { autoOpen: true, hideBlocks: true, promptReminder: true, accent: '#a83b32' };
 const PROMPT_KEY = 'shendu-wuzhou-state-reminder';
-const STATE_PROTOCOL = ['```wuzhou-state', '{"calendar":{"year":660,"reign":"显庆五年","month":1,"season":"春","phase":"武后参政"},"location":"东都洛阳","protagonist":{"id":"p1","name":"姓名","gender":"性别","age":21,"origin":"寒门","title":"白身","office":"无","generation":1,"alive":true},"abilities":{"学识":10,"文采":10,"政略":10,"德望":10,"人脉":10,"体魄":60,"家业":10},"examination":{"stage":"未入场","rank":"无","next":"乡贡","progress":0},"estate":{"cash":20,"land":0,"reputation":0,"influence":0},"quests":[],"relations":[],"spouses":[],"pregnancies":[],"children":[],"historicalEvents":[],"notices":[],"inventory":[],"succession":{"required":false,"reason":"","eligibleHeirs":[],"regent":null,"extinct":false,"previousProtagonists":[]}}', '```'].join('\n');
+const STATE_PROTOCOL = ['```wuzhou-state', '{"calendar":{"year":660,"reign":"显庆五年","month":1,"season":"春","phase":"武后参政"},"location":"东都洛阳","gameplay":{"mode":"沉浸人生","immersion":100},"powers":{"timeStop":{"active":false,"affected":"世界万物（玩家除外）"},"hypnosis":{"enabled":true,"lastTarget":"","effect":""},"malePregnancy":{"enabled":true}},"worldRules":{"femaleDominant":true,"malePregnancy":true},"protagonist":{"id":"player","name":"玩家","isPlayer":true,"gender":"未定","age":21,"origin":"寒门","title":"白身","office":"无","generation":1,"alive":true},"abilities":{"学识":10,"文采":10,"政略":10,"德望":10,"人脉":10,"体魄":60,"家业":10},"examination":{"stage":"未入场","rank":"无","next":"乡贡","progress":0},"estate":{"cash":20,"land":0,"reputation":0,"influence":0},"quests":[],"relations":[],"spouses":[],"pregnancies":[],"children":[],"historicalEvents":[],"notices":[],"inventory":[],"succession":{"required":false,"reason":"","eligibleHeirs":[],"regent":null,"extinct":false,"previousProtagonists":[]}}', '```'].join('\n');
 const TABS = [
-  ['overview', '总览'], ['exam', '科举'], ['career', '仕途'], ['family', '家族'], ['children', '子女'], ['relations', '关系'], ['history', '史事'],
+  ['overview', '总览'], ['powers', '神通'], ['exam', '科举'], ['career', '仕途'], ['family', '家族'], ['children', '子女'], ['relations', '关系'], ['history', '史事'],
 ];
 
 let panel;
@@ -35,7 +35,7 @@ function overviewView(state) {
   const identity = node('div');
   identity.append(node('span', 'ss-kicker', `第${state.protagonist.generation}代 · ${state.protagonist.origin}`));
   identity.append(node('h2', '', state.protagonist.name));
-  identity.append(node('p', '', `${state.protagonist.age}岁 · ${state.protagonist.title} · ${state.protagonist.office}`));
+  identity.append(node('p', '', `玩家化身 · ${state.protagonist.age}岁 · ${state.protagonist.title} · ${state.protagonist.office}`));
   const time = node('div', 'ss-time-seal'); time.append(node('strong', '', state.calendar.reign), node('span', '', `${state.calendar.year}年 · ${state.calendar.season}${state.calendar.month}月`), node('small', '', state.calendar.phase));
   hero.append(identity, time); root.append(hero);
   const abilities = node('section', 'ss-abilities');
@@ -46,6 +46,47 @@ function overviewView(state) {
     section('当前要事', state.quests, item => card(safe(item, 'name'), safe(item, 'progress'), safe(item, 'status'))),
     section('系统记事', state.notices.map(text => ({ text })), item => card(safe(item, 'text')), '暂无系统记事'),
   );
+  return root;
+}
+
+function powersView(state) {
+  const root = node('div', 'ss-view');
+  const mode = node('section', 'ss-power-hero');
+  mode.append(node('span', 'ss-kicker', 'PLAY STYLE'), node('h2', '', state.gameplay.mode), node('p', '', state.gameplay.mode === '纵情沙盒' ? '神通低摩擦，随心探索、改写与玩乐；世界仍记录你的行动结果。' : '以身份、时间与关系的连续性沉浸体验一生，神通仅在你主动使用时生效。'));
+  const switchMode = node('button', 'ss-power-action', state.gameplay.mode === '纵情沙盒' ? '切换为沉浸人生' : '切换为纵情沙盒');
+  switchMode.addEventListener('click', () => queuePrompt(state.gameplay.mode === '纵情沙盒' ? '从现在起切换为“沉浸人生”模式。保留当前状态，但恢复严格的时代因果、身份限制、资源消耗与社会反应，并更新 gameplay。' : '从现在起切换为“纵情沙盒”模式。保留当前状态，让我可以低摩擦地使用神通、探索和改写时代，并更新 gameplay。'));
+  mode.append(switchMode); root.append(mode);
+
+  const powers = [
+    {
+      title: '时停',
+      badge: state.powers.timeStop.active ? '已冻结' : '流动中',
+      text: state.powers.timeStop.active ? '除玩家外的世界万物停滞，年月不得推进。' : '可令除玩家外的世界停止，直至主动恢复。',
+      action: state.powers.timeStop.active ? '恢复时间' : '发动时停',
+      prompt: state.powers.timeStop.active ? '我解除时停。让世界从冻结的同一瞬间恢复流动，结算我在时停中留下的变化，并将 powers.timeStop.active 更新为 false。' : '我发动时停。除我之外的世界万物立即冻结；时停期间年月、年龄和妊娠月份都不得推进，并将 powers.timeStop.active 更新为 true。',
+    },
+    {
+      title: '催眠',
+      badge: state.powers.hypnosis.enabled ? '可用' : '关闭',
+      text: state.powers.hypnosis.lastTarget ? `最近目标：${state.powers.hypnosis.lastTarget} · ${state.powers.hypnosis.effect || '效果待定'}` : '可影响成年目标的认知、记忆与行动倾向；不能替代亲密同意。',
+      action: '施展催眠',
+      prompt: '我要对一名明确年满21岁的目标施展催眠。先让我填写目标、希望影响的认知／记忆／行动倾向及持续时间；催眠不得被解释为亲密同意，并在施展后更新 powers.hypnosis。',
+    },
+    {
+      title: '男子孕育',
+      badge: state.powers.malePregnancy.enabled ? '已开启' : '关闭',
+      text: '可使明确年满21岁的男子受孕；按月记录孕程，孩子出生年龄为0。',
+      action: '指定孕育',
+      prompt: '我要使用“男子孕育”神通。先让我指定一名明确年满21岁的男子与另一位同样年满21岁的生育相关角色，并确认孕育设定；成立后加入 pregnancies，按月推进且不得让孩子即时成年。',
+    },
+  ];
+  root.append(section('玩家神通', powers, power => {
+    const item = card(power.title, power.text, power.badge);
+    const button = node('button', 'ss-inline-action', power.action);
+    button.addEventListener('click', () => queuePrompt(power.prompt));
+    item.append(button);
+    return item;
+  }));
   return root;
 }
 
@@ -93,7 +134,7 @@ function render() {
   if (!panel) return;
   const body = panel.querySelector('.ss-body'); body.replaceChildren();
   if (statusWarning) body.append(node('div', 'ss-sync-warning', statusWarning));
-  const views = { overview: overviewView, exam: examView, career: careerView, family: familyView, children: childView, relations: relationView, history: historyView };
+  const views = { overview: overviewView, powers: powersView, exam: examView, career: careerView, family: familyView, children: childView, relations: relationView, history: historyView };
   body.append((views[activeTab] || overviewView)(latestState));
   panel.querySelectorAll('[data-tab]').forEach(button => button.classList.toggle('active', button.dataset.tab === activeTab));
   renderSuccession();
@@ -112,12 +153,12 @@ function renderSuccession() {
 }
 
 function createPanel() {
-  panel = node('aside', 'ss-panel'); panel.id = 'ss-panel'; panel.setAttribute('aria-label', '神都世家人生面板');
-  const header = node('header', 'ss-header'); const title = node('div'); title.append(node('span', 'ss-kicker', 'A LIFE IN WU ZHOU'), node('h1', '', '神都世家'), node('small', '', '武周人生录'));
+  panel = node('aside', 'ss-panel'); panel.id = 'ss-panel'; panel.setAttribute('aria-label', '武周人生面板');
+  const header = node('header', 'ss-header'); const title = node('div'); title.append(node('span', 'ss-kicker', 'A LIFE IN WU ZHOU'), node('h1', '', '武周人生'), node('small', '', '玩家化身 · 双模式'));
   const actions = node('div', 'ss-header-actions'); const refreshButton = node('button', '', '↻'); refreshButton.title = '刷新'; refreshButton.addEventListener('click', refresh); const close = node('button', '', '×'); close.title = '关闭'; close.addEventListener('click', () => { if (!latestState.succession.required) panel.classList.remove('is-open'); }); actions.append(refreshButton, close); header.append(title, actions);
   const tabs = node('nav', 'ss-tabs'); TABS.forEach(([id, label]) => { const button = node('button', '', label); button.dataset.tab = id; button.addEventListener('click', () => { activeTab = id; render(); }); tabs.append(button); });
   const body = node('div', 'ss-body');
-  const footer = node('footer', 'ss-footer'); [['温书备考','请根据我的科举阶段安排一段备考，并给出一道需要我作答的经义、诗赋或策问题。'],['查看朝局','请呈现当前朝局、重大历史节点、各派关系及我能够介入的机会。'],['经营家业','请让我安排田产、商事、宅院或家族收支。'],['教养子女','请列出每名子女的年龄、天赋、教育方针，并触发合适的培养事件。'],['整理族谱','请完整列出历代主角、配偶、子女、婚配、事业与继承资格。']].forEach(([label,prompt]) => { const button = node('button','',label); button.addEventListener('click',()=>queuePrompt(prompt)); footer.append(button); });
+  const footer = node('footer', 'ss-footer'); [['温书备考','请根据我的科举阶段安排一段备考，并给出一道需要我作答的经义、诗赋或策问题。'],['查看朝局','请呈现当前朝局、重大历史节点、各派关系及我能够介入的机会。'],['发动时停','我发动时停。除我之外的世界万物立即冻结，年月不得推进，并更新神通状态。'],['施展催眠','我要对一名明确年满21岁的目标施展催眠。先让我指定目标、影响内容与持续时间；催眠不构成亲密同意。'],['男子孕育','我要使用男子孕育神通。先让我指定所有明确年满21岁的相关角色，再按月记录孕育。'],['教养子女','请列出每名子女的年龄、天赋、教育方针，并触发合适的培养事件。'],['整理族谱','请完整列出历代主角、配偶、子女、婚配、事业与继承资格。']].forEach(([label,prompt]) => { const button = node('button','',label); button.addEventListener('click',()=>queuePrompt(prompt)); footer.append(button); });
   panel.append(header, tabs, body, footer); document.body.append(panel); render();
 }
 
@@ -125,7 +166,7 @@ function queuePrompt(message) { const textarea = document.querySelector('#send_t
 function updatePromptReminder(hasState) {
   if (!hasState || !settings().promptReminder) return setExtensionPrompt(PROMPT_KEY, '', extension_prompt_types.IN_PROMPT, 0);
   const snapshot = JSON.stringify(latestState).slice(0, 12000);
-  const reminder = `【神都世家状态同步】以下是上一回合已验证状态：${snapshot}\n本回合必须根据实际剧情更新它，并在正文末尾输出且只输出一个标记为 wuzhou-state 的有效JSON代码块。不得照抄已发生变化的字段，不得省略顶层字段，代码块后不得追加文字。`;
+  const reminder = `【武周人生状态同步】以下是上一回合已验证状态：${snapshot}\n本回合必须根据实际剧情更新它，并在正文末尾输出且只输出一个标记为 wuzhou-state 的有效JSON代码块。必须保留 gameplay、powers 与 worldRules，不得照抄已发生变化的字段，不得省略顶层字段，代码块后不得追加文字。`;
   setExtensionPrompt(PROMPT_KEY, reminder, extension_prompt_types.IN_PROMPT, 0, false);
 }
 function refresh({ expectUpdate = false } = {}) {
@@ -158,7 +199,7 @@ function placeLauncher() {
 }
 function addLauncher() {
   const row = node('div', 'ss-launcher-row'); row.id = 'ss-launcher-row';
-  const button = node('button', 'ss-launcher', '周'); button.id = 'ss-launcher'; button.title = '打开神都世家人生面板'; button.setAttribute('aria-label', button.title);
+  const button = node('button', 'ss-launcher', '周'); button.id = 'ss-launcher'; button.title = '打开武周人生玩家面板'; button.setAttribute('aria-label', button.title);
   button.addEventListener('click', () => { if (latestState.succession.required) panel.classList.add('is-open'); else panel.classList.toggle('is-open'); if (panel.classList.contains('is-open')) refresh(); });
   row.append(button); row.hidden = true; document.body.append(row); placeLauncher();
 }

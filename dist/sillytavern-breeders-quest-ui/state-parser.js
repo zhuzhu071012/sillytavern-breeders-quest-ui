@@ -13,7 +13,14 @@ export const ADULT_AGE = 21;
 export const DEFAULT_STATE = Object.freeze({
   calendar: { year: 660, reign: '显庆五年', month: 1, season: '春', phase: '武后参政' },
   location: '东都洛阳',
-  protagonist: { id: 'p1', name: '等待立传', gender: '未定', age: 21, origin: '未选择', title: '白身', office: '无', generation: 1, alive: true },
+  gameplay: { mode: '沉浸人生', immersion: 100 },
+  powers: {
+    timeStop: { active: false, affected: '世界万物（玩家除外）' },
+    hypnosis: { enabled: true, lastTarget: '', effect: '' },
+    malePregnancy: { enabled: true },
+  },
+  worldRules: { femaleDominant: true, malePregnancy: true },
+  protagonist: { id: 'player', name: '玩家', isPlayer: true, gender: '未定', age: 21, origin: '未选择', title: '白身', office: '无', generation: 1, alive: true },
   abilities: { 学识: 10, 文采: 10, 政略: 10, 德望: 10, 人脉: 10, 体魄: 60, 家业: 10 },
   examination: { stage: '未入场', rank: '无', next: '选择出身并开始启蒙', progress: 0 },
   estate: { cash: 20, land: 0, reputation: 0, influence: 0 },
@@ -55,6 +62,12 @@ export function normalizeState(input) {
   const protagonist = source.protagonist || source.player || {};
   const examination = source.examination || {};
   const estate = source.estate || {};
+  const gameplay = source.gameplay || {};
+  const powers = source.powers || {};
+  const timeStop = powers.timeStop || {};
+  const hypnosis = powers.hypnosis || {};
+  const malePregnancy = powers.malePregnancy || {};
+  const worldRules = source.worldRules || {};
   const abilitiesSource = source.abilities || source.stats || {};
   const abilities = Object.fromEntries(ABILITY_KEYS.map(key => [key, number(abilitiesSource[key], DEFAULT_STATE.abilities[key], 0, 100)]));
   const children = objects(source.children).map(normalizePerson);
@@ -63,7 +76,14 @@ export function normalizeState(input) {
   return {
     calendar: { year: number(calendar.year, 660, 600, 800), reign: text(calendar.reign, '显庆五年'), month: number(calendar.month, 1, 1, 12), season: text(calendar.season, '春'), phase: text(calendar.phase, '武后参政') },
     location: text(source.location, DEFAULT_STATE.location),
-    protagonist: { id: text(protagonist.id, 'p1'), name: text(protagonist.name, '等待立传'), gender: text(protagonist.gender, '未定'), age: number(protagonist.age, 21, 0, 120), origin: text(protagonist.origin, '未选择'), title: text(protagonist.title, '白身'), office: text(protagonist.office, '无'), generation: number(protagonist.generation, 1, 1, 99), alive: protagonist.alive !== false },
+    gameplay: { mode: gameplay.mode === '纵情沙盒' ? '纵情沙盒' : '沉浸人生', immersion: number(gameplay.immersion, gameplay.mode === '纵情沙盒' ? 20 : 100, 0, 100) },
+    powers: {
+      timeStop: { active: Boolean(timeStop.active), affected: text(timeStop.affected, '世界万物（玩家除外）') },
+      hypnosis: { enabled: hypnosis.enabled !== false, lastTarget: text(hypnosis.lastTarget), effect: text(hypnosis.effect) },
+      malePregnancy: { enabled: malePregnancy.enabled !== false },
+    },
+    worldRules: { femaleDominant: worldRules.femaleDominant !== false, malePregnancy: worldRules.malePregnancy !== false },
+    protagonist: { id: text(protagonist.id, 'player'), name: text(protagonist.name, '玩家'), isPlayer: true, gender: text(protagonist.gender, '未定'), age: number(protagonist.age, 21, 0, 120), origin: text(protagonist.origin, '未选择'), title: text(protagonist.title, '白身'), office: text(protagonist.office, '无'), generation: number(protagonist.generation, 1, 1, 99), alive: protagonist.alive !== false },
     abilities,
     examination: { stage: text(examination.stage, '未入场'), rank: text(examination.rank, '无'), next: text(examination.next, '选择出身并开始启蒙'), progress: number(examination.progress, 0, 0, 100) },
     estate: { cash: number(estate.cash, 20), land: number(estate.land, 0), reputation: number(estate.reputation, 0), influence: number(estate.influence, 0) },

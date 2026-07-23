@@ -1,11 +1,11 @@
 {
-  "display_name": "神都世家 · 人生面板",
+  "display_name": "武周人生 · 玩家面板",
   "loading_order": 20,
   "requires": [],
   "optional": [],
   "js": "index.js",
   "css": "style.css",
   "author": "SillyBook Community Edition",
-  "version": "2.0.5",
+  "version": "2.1.0",
   "homePage": "https://github.com/zhuzhu071012/sillytavern-breeders-quest-ui"
 }
