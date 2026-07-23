@@ -30,7 +30,7 @@
       "成人可选"
     ],
     "creator": "SillyBook Community Edition",
-    "character_version": "2.2.0",
+    "character_version": "2.2.1",
     "avatar": "none",
     "character_book": {
       "name": "武周人生·世界书",
@@ -1365,8 +1365,8 @@
           "secondary_keys": [],
           "comment": "回合末风物见闻",
           "content": "每次回复须随机生成1—4条“风物见闻”，人物身份、姓名与见闻应符合当前年月、地点和已发生的历史分歧。来源可包括：皇帝或朝廷人物关心外敌、废立与国政；官宦世家议论科举成绩、升贬、女男订婚嫁娶；平民关心物价、政策影响、游侠与市井传闻；玩家的成年伴侣、男妾或家奴关注玩家并可能涉及后院关系。不同回合不必凑齐四类，也不要固定人物。见闻是世界侧写，不得提前写入正文、不得让正文人物凭空知道。",
-          "constant": false,
-          "selective": true,
+          "constant": true,
+          "selective": false,
           "insertion_order": 131,
           "enabled": true,
           "position": "before_char",

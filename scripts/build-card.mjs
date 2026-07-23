@@ -42,6 +42,8 @@ const history = [
   entry(30, ['催眠','暗示','修改记忆','认知'], '玩家拥有催眠神通，可影响明确年满21岁目标的认知、记忆、态度与非亲密行动倾向，并可指定持续时间。施展后应记录目标与效果，NPC按被改变后的认知行动。催眠不得用于把拒绝改写成亲密同意，也不得对任何未成年人产生情色、婚姻或孕育导向的效果。', '催眠神通'),
   entry(31, ['风物见闻','与此同时','StatusBlock','皇帝','官宦世家','平民','后院'], '每次回复须随机生成1—4条“风物见闻”，人物身份、姓名与见闻应符合当前年月、地点和已发生的历史分歧。来源可包括：皇帝或朝廷人物关心外敌、废立与国政；官宦世家议论科举成绩、升贬、女男订婚嫁娶；平民关心物价、政策影响、游侠与市井传闻；玩家的成年伴侣、男妾或家奴关注玩家并可能涉及后院关系。不同回合不必凑齐四类，也不要固定人物。见闻是世界侧写，不得提前写入正文、不得让正文人物凭空知道。', '回合末风物见闻'),
 ];
+history.at(-1).constant = true;
+history.at(-1).selective = false;
 
 const stateJson = '{"calendar":{"year":660,"reign":"显庆五年","month":1,"season":"春","phase":"武后参政"},"location":"东都洛阳","powers":{"timeStop":{"active":false,"affected":"世界万物（玩家除外）"},"hypnosis":{"enabled":true,"lastTarget":"","effect":""},"malePregnancy":{"enabled":true}},"worldRules":{"femaleDominant":true,"malePregnancy":true},"protagonist":{"id":"player","name":"玩家","isPlayer":true,"gender":"未定","age":21,"origin":"寒门","title":"白身","office":"无","generation":1,"alive":true},"abilities":{"学识":10,"文采":10,"政略":10,"德望":10,"人脉":10,"体魄":60,"家业":10},"examination":{"stage":"未入场","rank":"无","next":"乡贡","progress":0},"estate":{"cash":20,"land":0,"reputation":0,"influence":0},"quests":[{"name":"建立玩家化身","type":"开局","status":"进行中","progress":"0/1"}],"relations":[],"spouses":[],"pregnancies":[],"children":[],"historicalEvents":[{"name":"武周建立","year":690,"status":"将至","outcome":"尚待发展"},{"name":"神龙政变","year":705,"status":"将至","outcome":"尚待发展"}],"notices":["你是玩家化身，历史人物均为NPC","你可以沉浸生活，也可随时使用神通自由玩乐"],"inventory":[],"succession":{"required":false,"reason":"","eligibleHeirs":[],"regent":null,"extinct":false,"previousProtagonists":[]}}';
 const stateSchema = ['```wuzhou-state', stateJson, '```'].join('\n');
@@ -58,7 +60,7 @@ const card = {
     system_prompt: `你是《武周人生》的叙述者与状态裁判。主角永远是{{user}}操控的玩家化身，真实历史人物一律为NPC。不要替玩家决定姓名、身份和关键选择。严格延续时间、年龄、家族、财产、关系、神通与历史因果。玩家既可认真生活也可随时自由玩乐，不要要求预先分类玩法。所有成人亲密内容参与者必须明确年满21岁、自愿并具有同意能力；催眠不能构成亲密同意，任何未成年人不得进入情色、婚姻、孕育或裸露内容。`,
     post_history_instructions: `每次回复严格按以下顺序：一、剧情正文与必要选项；二、独立的风物见闻 StatusBlock；三、供前端读取的 wuzhou-state JSON代码块。正文不得出现、引用或预告风物见闻。风物见闻每回合随机1—4条，随机选择符合时代的身份与名字，最多4条，不必覆盖所有类别；内容须与当前年月、历史和玩家关系一致。严格使用：\n<StatusBlock>\n\n\`\`\`json\n╒═════\n\n风物见闻：\n\n<(人物的身份)>(人物的名字)：(人物的见闻)\n\n╘═════\n\`\`\`\n\n</StatusBlock>\n\n随后输出且只输出一个标记为 wuzhou-state 的JSON代码块，不得省略顶层字段，代码块后不得追加文字：\n${stateSchema}\n\n每回合必须延续 powers 与 worldRules。时停期间年月、年龄、妊娠和历史节点均不推进；催眠后记录目标和效果；男子孕育与普通孕育一样按月更新。时间跳跃须同步更新所有人物年龄、妊娠、教育、健康、家产和历史节点。主角死亡时 succession.required 必须为 true；成年继承人是存活且 age>=21 的后代。换代不可逆，新主角仍是玩家化身。`,
     alternate_greetings: [], tags: ['中文', '中国古代', '武则天', '武周', '玩家主角', '自由人生', '风物见闻', '时停', '催眠', '男性生子', '科举', '人生模拟', '代际继承', 'AnyPOV', '成人可选'],
-    creator: 'SillyBook Community Edition', character_version: '2.2.0', avatar: 'none',
+    creator: 'SillyBook Community Edition', character_version: '2.2.1', avatar: 'none',
     character_book: { name: '武周人生·世界书', description: '660—705年历史骨架、玩家神通、人生系统与风物见闻', scan_depth: 4, token_budget: 14000, recursive_scanning: false, extensions: {}, entries: history },
     extensions: { chub: { id: 0, preset: null, full_path: '', custom_css: null, extensions: [], expressions: null, alt_expressions: {}, background_image: '', related_lorebooks: [] }, depth_prompt: { depth: 0, prompt: '' } },
   },

@@ -162,9 +162,23 @@ function createPanel() {
 
 function queuePrompt(message) { const textarea = document.querySelector('#send_textarea'); if (!textarea) return window.toastr?.warning('未找到聊天输入框'); textarea.value = message; textarea.dispatchEvent(new Event('input', { bubbles: true })); textarea.focus(); if (!latestState.succession.required) panel.classList.remove('is-open'); }
 function updatePromptReminder(hasState) {
-  if (!hasState || !settings().promptReminder) return setExtensionPrompt(PROMPT_KEY, '', extension_prompt_types.IN_PROMPT, 0);
-  const snapshot = JSON.stringify(latestState).slice(0, 12000);
-  const reminder = `【武周人生状态同步】以下是上一回合已验证状态：${snapshot}\n本回合必须根据实际剧情更新它。正文结束后先按角色卡格式输出独立的 <StatusBlock> 风物见闻，再输出且只输出一个标记为 wuzhou-state 的有效JSON代码块。必须保留 powers 与 worldRules，不得照抄已发生变化的字段，不得省略顶层字段，状态代码块后不得追加文字。`;
+  if (!settings().promptReminder) return setExtensionPrompt(PROMPT_KEY, '', extension_prompt_types.IN_PROMPT, 0);
+  const snapshot = hasState ? `\n以下是上一回合已验证状态：${JSON.stringify(latestState).slice(0, 12000)}` : '';
+  const reminder = `【武周人生强制回合格式】每次回复必须按顺序包含：剧情正文、风物见闻、wuzhou-state。正文中不得出现或引用见闻。正文结束后随机生成1—4条符合当前年月与局势的见闻，人物身份和姓名每回合可变化，最多4条，严格使用：
+<StatusBlock>
+
+\`\`\`json
+╒═════
+
+风物见闻：
+
+<(人物的身份)>(人物的名字)：(人物的见闻)
+
+╘═════
+\`\`\`
+
+</StatusBlock>
+随后输出一个标记为 wuzhou-state 的有效JSON代码块。不得省略 powers、worldRules 等顶层字段，状态代码块后不得追加文字。${snapshot}`;
   setExtensionPrompt(PROMPT_KEY, reminder, extension_prompt_types.IN_PROMPT, 0, false);
 }
 function refresh({ expectUpdate = false } = {}) {
