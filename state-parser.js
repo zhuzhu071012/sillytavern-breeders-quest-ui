@@ -13,7 +13,6 @@ export const ADULT_AGE = 21;
 export const DEFAULT_STATE = Object.freeze({
   calendar: { year: 660, reign: '显庆五年', month: 1, season: '春', phase: '武后参政' },
   location: '东都洛阳',
-  gameplay: { mode: '沉浸人生', immersion: 100 },
   powers: {
     timeStop: { active: false, affected: '世界万物（玩家除外）' },
     hypnosis: { enabled: true, lastTarget: '', effect: '' },
@@ -62,7 +61,6 @@ export function normalizeState(input) {
   const protagonist = source.protagonist || source.player || {};
   const examination = source.examination || {};
   const estate = source.estate || {};
-  const gameplay = source.gameplay || {};
   const powers = source.powers || {};
   const timeStop = powers.timeStop || {};
   const hypnosis = powers.hypnosis || {};
@@ -76,7 +74,6 @@ export function normalizeState(input) {
   return {
     calendar: { year: number(calendar.year, 660, 600, 800), reign: text(calendar.reign, '显庆五年'), month: number(calendar.month, 1, 1, 12), season: text(calendar.season, '春'), phase: text(calendar.phase, '武后参政') },
     location: text(source.location, DEFAULT_STATE.location),
-    gameplay: { mode: gameplay.mode === '纵情沙盒' ? '纵情沙盒' : '沉浸人生', immersion: number(gameplay.immersion, gameplay.mode === '纵情沙盒' ? 20 : 100, 0, 100) },
     powers: {
       timeStop: { active: Boolean(timeStop.active), affected: text(timeStop.affected, '世界万物（玩家除外）') },
       hypnosis: { enabled: hypnosis.enabled !== false, lastTarget: text(hypnosis.lastTarget), effect: text(hypnosis.effect) },

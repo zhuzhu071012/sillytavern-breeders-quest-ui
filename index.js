@@ -6,7 +6,7 @@ const EXTENSION_NAME = 'sillytavern-breeders-quest-ui';
 const EXTENSION_PATH = `scripts/extensions/third-party/${EXTENSION_NAME}`;
 const DEFAULT_SETTINGS = { autoOpen: true, hideBlocks: true, promptReminder: true, accent: '#a83b32' };
 const PROMPT_KEY = 'shendu-wuzhou-state-reminder';
-const STATE_PROTOCOL = ['```wuzhou-state', '{"calendar":{"year":660,"reign":"显庆五年","month":1,"season":"春","phase":"武后参政"},"location":"东都洛阳","gameplay":{"mode":"沉浸人生","immersion":100},"powers":{"timeStop":{"active":false,"affected":"世界万物（玩家除外）"},"hypnosis":{"enabled":true,"lastTarget":"","effect":""},"malePregnancy":{"enabled":true}},"worldRules":{"femaleDominant":true,"malePregnancy":true},"protagonist":{"id":"player","name":"玩家","isPlayer":true,"gender":"未定","age":21,"origin":"寒门","title":"白身","office":"无","generation":1,"alive":true},"abilities":{"学识":10,"文采":10,"政略":10,"德望":10,"人脉":10,"体魄":60,"家业":10},"examination":{"stage":"未入场","rank":"无","next":"乡贡","progress":0},"estate":{"cash":20,"land":0,"reputation":0,"influence":0},"quests":[],"relations":[],"spouses":[],"pregnancies":[],"children":[],"historicalEvents":[],"notices":[],"inventory":[],"succession":{"required":false,"reason":"","eligibleHeirs":[],"regent":null,"extinct":false,"previousProtagonists":[]}}', '```'].join('\n');
+const STATE_PROTOCOL = ['```wuzhou-state', '{"calendar":{"year":660,"reign":"显庆五年","month":1,"season":"春","phase":"武后参政"},"location":"东都洛阳","powers":{"timeStop":{"active":false,"affected":"世界万物（玩家除外）"},"hypnosis":{"enabled":true,"lastTarget":"","effect":""},"malePregnancy":{"enabled":true}},"worldRules":{"femaleDominant":true,"malePregnancy":true},"protagonist":{"id":"player","name":"玩家","isPlayer":true,"gender":"未定","age":21,"origin":"寒门","title":"白身","office":"无","generation":1,"alive":true},"abilities":{"学识":10,"文采":10,"政略":10,"德望":10,"人脉":10,"体魄":60,"家业":10},"examination":{"stage":"未入场","rank":"无","next":"乡贡","progress":0},"estate":{"cash":20,"land":0,"reputation":0,"influence":0},"quests":[],"relations":[],"spouses":[],"pregnancies":[],"children":[],"historicalEvents":[],"notices":[],"inventory":[],"succession":{"required":false,"reason":"","eligibleHeirs":[],"regent":null,"extinct":false,"previousProtagonists":[]}}', '```'].join('\n');
 const TABS = [
   ['overview', '总览'], ['powers', '神通'], ['exam', '科举'], ['career', '仕途'], ['family', '家族'], ['children', '子女'], ['relations', '关系'], ['history', '史事'],
 ];
@@ -52,10 +52,8 @@ function overviewView(state) {
 function powersView(state) {
   const root = node('div', 'ss-view');
   const mode = node('section', 'ss-power-hero');
-  mode.append(node('span', 'ss-kicker', 'PLAY STYLE'), node('h2', '', state.gameplay.mode), node('p', '', state.gameplay.mode === '纵情沙盒' ? '神通低摩擦，随心探索、改写与玩乐；世界仍记录你的行动结果。' : '以身份、时间与关系的连续性沉浸体验一生，神通仅在你主动使用时生效。'));
-  const switchMode = node('button', 'ss-power-action', state.gameplay.mode === '纵情沙盒' ? '切换为沉浸人生' : '切换为纵情沙盒');
-  switchMode.addEventListener('click', () => queuePrompt(state.gameplay.mode === '纵情沙盒' ? '从现在起切换为“沉浸人生”模式。保留当前状态，但恢复严格的时代因果、身份限制、资源消耗与社会反应，并更新 gameplay。' : '从现在起切换为“纵情沙盒”模式。保留当前状态，让我可以低摩擦地使用神通、探索和改写时代，并更新 gameplay。'));
-  mode.append(switchMode); root.append(mode);
+  mode.append(node('span', 'ss-kicker', 'PLAYER FREEDOM'), node('h2', '', '此世由你亲历'), node('p', '', '你可以认真经历日常、科举、家业与一生，也可以随时使用神通、改写局势或在时代中自由玩乐，一切取决于当下选择。'));
+  root.append(mode);
 
   const powers = [
     {
@@ -154,7 +152,7 @@ function renderSuccession() {
 
 function createPanel() {
   panel = node('aside', 'ss-panel'); panel.id = 'ss-panel'; panel.setAttribute('aria-label', '武周人生面板');
-  const header = node('header', 'ss-header'); const title = node('div'); title.append(node('span', 'ss-kicker', 'A LIFE IN WU ZHOU'), node('h1', '', '武周人生'), node('small', '', '玩家化身 · 双模式'));
+  const header = node('header', 'ss-header'); const title = node('div'); title.append(node('span', 'ss-kicker', 'A LIFE IN WU ZHOU'), node('h1', '', '武周人生'), node('small', '', '玩家化身 · 自由人生'));
   const actions = node('div', 'ss-header-actions'); const refreshButton = node('button', '', '↻'); refreshButton.title = '刷新'; refreshButton.addEventListener('click', refresh); const close = node('button', '', '×'); close.title = '关闭'; close.addEventListener('click', () => { if (!latestState.succession.required) panel.classList.remove('is-open'); }); actions.append(refreshButton, close); header.append(title, actions);
   const tabs = node('nav', 'ss-tabs'); TABS.forEach(([id, label]) => { const button = node('button', '', label); button.dataset.tab = id; button.addEventListener('click', () => { activeTab = id; render(); }); tabs.append(button); });
   const body = node('div', 'ss-body');
@@ -166,7 +164,7 @@ function queuePrompt(message) { const textarea = document.querySelector('#send_t
 function updatePromptReminder(hasState) {
   if (!hasState || !settings().promptReminder) return setExtensionPrompt(PROMPT_KEY, '', extension_prompt_types.IN_PROMPT, 0);
   const snapshot = JSON.stringify(latestState).slice(0, 12000);
-  const reminder = `【武周人生状态同步】以下是上一回合已验证状态：${snapshot}\n本回合必须根据实际剧情更新它，并在正文末尾输出且只输出一个标记为 wuzhou-state 的有效JSON代码块。必须保留 gameplay、powers 与 worldRules，不得照抄已发生变化的字段，不得省略顶层字段，代码块后不得追加文字。`;
+  const reminder = `【武周人生状态同步】以下是上一回合已验证状态：${snapshot}\n本回合必须根据实际剧情更新它。正文结束后先按角色卡格式输出独立的 <StatusBlock> 风物见闻，再输出且只输出一个标记为 wuzhou-state 的有效JSON代码块。必须保留 powers 与 worldRules，不得照抄已发生变化的字段，不得省略顶层字段，状态代码块后不得追加文字。`;
   setExtensionPrompt(PROMPT_KEY, reminder, extension_prompt_types.IN_PROMPT, 0, false);
 }
 function refresh({ expectUpdate = false } = {}) {
@@ -195,7 +193,7 @@ function placeLauncher() {
   const messages = [...document.querySelectorAll('#chat .mes[is_user="false"]')].filter(message => message.getAttribute('is_system') !== 'true');
   const target = messages.at(-1)?.querySelector('.mes_text');
   row.hidden = !target;
-  if (target && (row.parentElement !== target.parentElement || row.previousElementSibling !== target)) target.insertAdjacentElement('afterend', row);
+  if (target && row.parentElement !== target) target.append(row);
 }
 function addLauncher() {
   const row = node('div', 'ss-launcher-row'); row.id = 'ss-launcher-row';

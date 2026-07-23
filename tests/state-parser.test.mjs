@@ -51,18 +51,15 @@ test('状态块可从消息显示文本中移除', () => {
   assert.equal(stripStateBlocks(strippedByRenderer), '');
 });
 
-test('玩家身份、游玩模式与神通状态具有稳定默认值', () => {
+test('玩家身份与神通状态具有稳定默认值', () => {
   const immersive = normalizeState({});
   assert.equal(immersive.protagonist.isPlayer, true);
-  assert.equal(immersive.gameplay.mode, '沉浸人生');
   assert.equal(immersive.powers.timeStop.active, false);
   assert.equal(immersive.powers.hypnosis.enabled, true);
   assert.equal(immersive.worldRules.malePregnancy, true);
 
-  const sandbox = normalizeState({ gameplay: { mode: '纵情沙盒', immersion: 15 }, powers: { timeStop: { active: true } } });
-  assert.equal(sandbox.gameplay.mode, '纵情沙盒');
-  assert.equal(sandbox.gameplay.immersion, 15);
-  assert.equal(sandbox.powers.timeStop.active, true);
+  const stopped = normalizeState({ powers: { timeStop: { active: true } } });
+  assert.equal(stopped.powers.timeStop.active, true);
 });
 
 test('男子孕育只校验年龄而不限制性别', () => {
