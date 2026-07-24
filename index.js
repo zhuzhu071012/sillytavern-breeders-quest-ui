@@ -17,6 +17,7 @@ let activeTab = 'overview';
 let autoOpened = false;
 let statusWarning = '';
 let refreshTimers = [];
+let launcherResizeBound = false;
 
 function settings() {
   extension_settings[EXTENSION_NAME] = { ...DEFAULT_SETTINGS, ...(extension_settings[EXTENSION_NAME] || {}) };
@@ -202,9 +203,17 @@ function hideStateBlocks() {
   });
 }
 function placeLauncher() {
-  const row = document.querySelector('#ss-launcher-row');
-  if (!row) return;
+  let row = document.querySelector('#ss-launcher-row');
+  if (!row) {
+    if (panel) addLauncher();
+    row = document.querySelector('#ss-launcher-row');
+    if (!row) return;
+  }
+  if (row.parentElement !== document.body) document.body.append(row);
   row.hidden = false;
+  row.style.display = 'flex';
+  row.style.visibility = 'visible';
+  row.style.opacity = '1';
   const saved = settings().launcherPosition;
   if (saved && Number.isFinite(saved.x) && Number.isFinite(saved.y)) {
     const maxX = Math.max(8, window.innerWidth - row.offsetWidth - 8);
@@ -216,6 +225,8 @@ function placeLauncher() {
   }
 }
 function addLauncher() {
+  const existing = document.querySelector('#ss-launcher-row');
+  if (existing) { existing.hidden = false; placeLauncher(); return existing; }
   const row = node('div', 'ss-launcher-row'); row.id = 'ss-launcher-row';
   const button = node('button', 'ss-launcher', '周'); button.id = 'ss-launcher'; button.title = '打开武周人生玩家面板'; button.setAttribute('aria-label', button.title);
   let drag = null;
@@ -251,13 +262,23 @@ function addLauncher() {
   button.addEventListener('pointerup', finishDrag);
   button.addEventListener('pointercancel', event => { if (drag?.pointerId === event.pointerId) { drag = null; row.classList.remove('is-dragging'); } });
   row.append(button); row.hidden = false; document.body.append(row); placeLauncher();
-  window.addEventListener('resize', placeLauncher);
+  if (!launcherResizeBound) { window.addEventListener('resize', placeLauncher); launcherResizeBound = true; }
+  return row;
 }
 async function copyProtocol() { await navigator.clipboard.writeText(STATE_PROTOCOL); window.toastr?.success('武周状态协议已复制'); }
-function bindSettings() { const value = settings(); $('#ss-auto-open').prop('checked', value.autoOpen).on('input', event => { value.autoOpen = event.target.checked; saveSettingsDebounced(); }); $('#ss-hide-blocks').prop('checked', value.hideBlocks).on('input', event => { value.hideBlocks = event.target.checked; hideStateBlocks(); saveSettingsDebounced(); }); $('#ss-prompt-reminder').prop('checked', value.promptReminder).on('input', event => { value.promptReminder = event.target.checked; updatePromptReminder(latestState !== DEFAULT_STATE); saveSettingsDebounced(); }); $('#ss-accent').val(value.accent).on('input', event => { value.accent = event.target.value; document.documentElement.style.setProperty('--ss-accent', value.accent); saveSettingsDebounced(); }); $('#ss-open-panel').on('click', () => { panel.classList.add('is-open'); refresh(); }); $('#ss-copy-protocol').on('click', copyProtocol); $('#ss-retry-sync').on('click', () => { queuePrompt('请不要推进剧情，只根据刚才已经发生的内容补发一个完整、有效、已更新的 wuzhou-state JSON代码块。'); }); document.documentElement.style.setProperty('--ss-accent', value.accent); }
+function bindSettings() { const value = settings(); $('#ss-auto-open').prop('checked', value.autoOpen).on('input', event => { value.autoOpen = event.target.checked; saveSettingsDebounced(); }); $('#ss-hide-blocks').prop('checked', value.hideBlocks).on('input', event => { value.hideBlocks = event.target.checked; hideStateBlocks(); saveSettingsDebounced(); }); $('#ss-prompt-reminder').prop('checked', value.promptReminder).on('input', event => { value.promptReminder = event.target.checked; updatePromptReminder(latestState !== DEFAULT_STATE); saveSettingsDebounced(); }); $('#ss-accent').val(value.accent).on('input', event => { value.accent = event.target.value; document.documentElement.style.setProperty('--ss-accent', value.accent); saveSettingsDebounced(); }); $('#ss-open-panel').on('click', () => { panel.classList.add('is-open'); refresh(); }); $('#ss-reset-launcher').on('click', () => { value.launcherPosition = null; saveSettingsDebounced(); const row = document.querySelector('#ss-launcher-row'); if (row) { row.style.left = ''; row.style.top = ''; row.style.right = '24px'; row.style.bottom = '92px'; } placeLauncher(); }); $('#ss-copy-protocol').on('click', copyProtocol); $('#ss-retry-sync').on('click', () => { queuePrompt('请不要推进剧情，只根据刚才已经发生的内容补发一个完整、有效、已更新的 wuzhou-state JSON代码块。'); }); document.documentElement.style.setProperty('--ss-accent', value.accent); }
 
 jQuery(async () => {
-  settings(); $('#extensions_settings2').append(await $.get(`${EXTENSION_PATH}/settings.html`)); bindSettings(); createPanel(); addLauncher();
+  settings();
+  createPanel();
+  addLauncher();
+  try {
+    $('#extensions_settings2').append(await $.get(`${EXTENSION_PATH}/settings.html`));
+    bindSettings();
+  } catch (error) {
+    console.error(`[${EXTENSION_NAME}] 设置面板加载失败，核心面板与周按钮仍可使用。`, error);
+    document.documentElement.style.setProperty('--ss-accent', settings().accent);
+  }
   const chat = document.querySelector('#chat'); if (chat) new MutationObserver(() => scheduleRefresh(false)).observe(chat, { childList: true, subtree: true });
   [event_types.MESSAGE_RECEIVED, event_types.CHARACTER_MESSAGE_RENDERED, event_types.GENERATION_ENDED, event_types.MESSAGE_SWIPED, event_types.MESSAGE_UPDATED, event_types.MESSAGE_EDITED].forEach(type => eventSource.on(type, () => { placeLauncher(); scheduleRefresh(true); }));
   [event_types.CHAT_CHANGED, event_types.MESSAGE_DELETED].forEach(type => eventSource.on(type, () => { autoOpened = false; statusWarning = ''; scheduleRefresh(false); }));
